@@ -1,0 +1,105 @@
+<html>
+<head>
+<title>Supervision</title>
+<script type="text/javascript"
+	src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="/js/libs/jquery.min.js"><\/script>')</script>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+<script type="text/javascript">
+	var chart;
+	var options;
+	var chartData;
+
+	$(document).ready(function () {
+		setInterval(callWebService, 1000);
+	})
+
+ 	// Load the Visualization API and the piechart package.
+    google.load('visualization', '1.0', {'packages':['corechart']});
+
+    // Set a callback to run when the Google Visualization API is loaded.
+    google.setOnLoadCallback(drawChart);
+
+    // Callback that creates and populates a data table,
+    // instantiates the pie chart, passes in the data and
+    // draws it.
+    function drawChart() {
+
+    // Create the data table.
+    chartData = new google.visualization.DataTable();
+    chartData.addColumn('string', 'Name');
+    chartData.addColumn('number', 'Percent');
+    //chartData.addRows([['CPU', 0]]);
+
+    // Set chart options
+    options = {'title':'CPU Usage',
+                             'width':600,
+                             'height':300};
+
+    // Instantiate and draw our chart, passing in some options.
+    chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+    chart.draw(chartData, options);
+    }
+        
+
+  
+        
+    function callWebService() {
+    	var wsUrl = "http://localhost:8080/Supervision/services/Supervisor";
+        var soapRequest =
+            	 '<?xml version="1.0" encoding="utf-8"?>' +
+                 '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"' + 
+                 ' xmlns:ser="http://service.supervision.orange.com/">'+
+                 '<soapenv:Header/>' +
+                     '<soapenv:Body>' +
+                     '<ser:getCpuUsage>' +                            
+                     '</ser:getCpuUsage>' +
+                     '</soapenv:Body>' +
+                 '</soapenv:Envelope>';
+            $.ajax({
+                type: "POST",
+                url: wsUrl,
+                contentType: "text/xml",
+                dataType: "xml",
+                data: soapRequest,
+                success: processSuccess,
+                error: processError
+            });
+        }
+    
+    function processSuccess(data, status, req) {
+    	if (status == "success") {
+    		var cpuUsage = $(req.responseXML).find("return").text();
+       		$("#cpuResponse").text(cpuUsage);
+    	}
+    	if(chartData.getNumberOfRows() >= 20) {
+    		chartData.removeRow(0);
+    	}
+    	chartData.addRow(['CPU', Number(cpuUsage)]);
+    	chart.draw(chartData, options);
+    }
+
+    function processError(data, status, req) {
+    	alert(req.responseText + " " + status);
+    }  
+
+    </script>
+</head>
+
+
+<body>
+	<h1>Supervision</h1>
+	<h3>Cpu</h3>
+	usage :
+	<label id="cpuResponse"></label>
+
+	<!--Div that will hold the pie chart-->
+	<div id="chart_div"></div>
+
+	<br>
+	<input id="btnCallWebService" value="Get CPU Usage" type="button" />
+	<input id="txtName" type="text" /> and id :
+	<input id="txtId" type="text" />
+</body>
+</html>
